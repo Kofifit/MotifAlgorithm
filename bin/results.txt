@@ -1,0 +1,44 @@
+gtrieScanner Results
+------------------------------------------
+General Information
+
+Start of Computation: 21h14m14s 02/08/2024
+End of Computation: 21h14m14s 02/08/2024
+
+Subgraph Size: 3
+Graph File: "bin/networkNauty.txt"
+Directed: YES
+Nr Nodes: 65
+Nr Edges: 51
+
+Method: ESU on original network
+Different Types of Subgraphs Found [Original Network]: 4
+Subgraph Occurrences Found [Original Network]: 111
+Time for computing census on original network: 0.000123s
+Average time for census on random network: 0.000000s
+
+Number of random networks: 0
+Random seed: 1722626054
+Exchanges per edge: 3
+Number of tries per exchange: 10
+------------------------------------------
+Motif Analysis Results
+
+Graph   Org_Freq |  Z-score |    Rnd_Avg +/-    Rnd_Dev
+
+001
+100
+000           42 |     0.00 |       0.00 +/-       0.00
+
+011
+000
+000           42 |     0.00 |       0.00 +/-       0.00
+
+000
+100
+100           26 |     0.00 |       0.00 +/-       0.00
+
+011
+001
+000            1 |     0.00 |       0.00 +/-       0.00
+
