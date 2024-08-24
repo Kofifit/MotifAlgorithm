@@ -20,4 +20,8 @@ After installing in the same terminal run the following lines to load the enviro
 To run the algorithm you can run the following line in your terminal:
 
 
+The 'main.py' file receives the following parameters - s (solutions file), a (algorithm type), n (motif size), *m (motifs file), *o (output file)
+* These are optional parameters
+
+
 
