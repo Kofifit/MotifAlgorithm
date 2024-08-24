@@ -15,6 +15,7 @@ The tool was only tested on Ubuntu.
 To install the tool and all necessary packages run the following script through the terminal - 'install.sh'
 
 After installing in the same terminal run the following lines to load the environment :
+source rein_motif_algorithm_env/bin/activate
 
 To run the algorithm you can run the following line in your terminal:
 
