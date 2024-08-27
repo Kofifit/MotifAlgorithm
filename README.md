@@ -18,7 +18,7 @@ After installing in the same terminal run the following lines to load the enviro
 ```source rein_motif_algorithm_env/bin/activate```
 
 To run the algorithm you can run the following line in your terminal:
-
+```python3 main.py --s /location/of/your/solutions/file.xlsx --a Nauty (algorithm name, another option is BruteForce) --n 3 (size of motifs up to 8)```
 
 The 'main.py' file receives the following parameters - s (solutions file), a (algorithm type), n (motif size), *m (motifs file), *o (output file)
 * These are optional parameters
