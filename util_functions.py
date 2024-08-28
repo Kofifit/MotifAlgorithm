@@ -75,7 +75,7 @@ class UtilFunctions:
         df = df.astype(int)
         network = dict()
         for index, row in df.iterrows():
-            network[row['Index']] = [[row['Gene A'], row['Gene B']], row['Activation/Repression'], row['delta']]
+            network[int(row['Index'])] = [[int(row['Gene A']), int(row['Gene B'])], int(row['Activation/Repression']), int(row['delta'])]
         return network
 
 

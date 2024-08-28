@@ -542,7 +542,6 @@ class MotifSearcher:
     def __init__(self, motifs_file, n):
         self.motifs = self.getMotifs(motifs_file)
         self.motif_size = n
-        print(self.motifs)
 
     def getMotifs(self, motifs_file):
         motifs = []
