@@ -630,9 +630,8 @@ class GraphVisualization:
 
             motifs = network[u][v]['motifs']
             color = 'black'
-            if motif_index < len(motifs):
-                if motifs[motif_index] == 1:
-                    color = 'red'
+            if motif_index in motifs:
+                color = 'red'
             colors[index].append(color)
 
         node_size = 50
@@ -666,9 +665,8 @@ class GraphVisualization:
 
             motifs = network[u][v]['motifs']
             width = 0.7
-            if motif_index < len(motifs):
-                if motifs[motif_index] == 1:
-                    width = 2
+            if motif_index in motifs:
+                width = 2
             widths[index].append(width)
 
             delta = network[u][v]['delta']

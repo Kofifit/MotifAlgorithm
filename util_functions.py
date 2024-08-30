@@ -112,14 +112,10 @@ class UtilFunctions:
         Returns:
             dict: The updated network dictionary with motifs added.
         '''
-        for key in network.keys():
-            network[key].extend(np.zeros(len(motifs_df), dtype=int))
-        index = -len(motifs_df)
         for i, motif in motifs_df.iterrows():
             indices = set(sum(motif['Edges indices'], ()))
             for key in indices:
-                network[key][index] = 1
-            index += 1
+                network[key].append(i)
         return network
 
 

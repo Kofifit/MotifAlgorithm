@@ -1,11 +1,15 @@
 import argparse
 from time import time
 from util_functions import UtilFunctions
-from Classes import NetworkDisessembler, NetworkDeltaExtractor, DeltaNetworkMotifAnalyzer, GraphVisualization
+from Classes import NetworkDisessembler, NetworkDeltaExtractor, DeltaNetworkMotifAnalyzer, GraphVisualization, MotifSearcher
+
 
 def run(solutions_file, algorithm_type, n, motifs_file, output_file):
 
     print('Started analysis...')
+    motifSearcher = False
+    if motifs_file != '':
+        motifSearcher = MotifSearcher(motifs_file, n)
 
     solutions = UtilFunctions.excel2solutionSetList(solutions_file)
     analyses_modified = []
@@ -28,6 +32,10 @@ def run(solutions_file, algorithm_type, n, motifs_file, output_file):
             end_time = time()
             elapsed_time = end_time - start_time
             time_modified.append(elapsed_time)
+
+        # Search for motifs
+        if motifSearcher:
+            analysis = motifSearcher.findMotifs(analysis)
 
         # Save analysis results to CSV files
         filename = output_file + f'{i}.csv'
@@ -62,25 +70,30 @@ def  getGraphs(solutions, analyses_lst):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Script that gets s (solutions file), a (algorithm type), n (motif size), "
-                    "m (motifs file), o (output file)"
-    )
-    parser.add_argument("--s", required=True, type=str)
-    parser.add_argument("--a", required=True, type=str)
-    parser.add_argument("--n", required=True, type=int)
-    parser.add_argument("--m", required=False, type=str)
-    parser.add_argument("--o", required=False, type=str)
-    args = parser.parse_args()
+    # parser = argparse.ArgumentParser(
+    #     description="Script that gets s (solutions file), a (algorithm type), n (motif size), "
+    #                 "m (motifs file), o (output file)"
+    # )
+    # parser.add_argument("--s", required=True, type=str)
+    # parser.add_argument("--a", required=True, type=str)
+    # parser.add_argument("--n", required=True, type=int)
+    # parser.add_argument("--m", required=False, type=str)
+    # parser.add_argument("--o", required=False, type=str)
+    # args = parser.parse_args()
+    #
+    # solutions_file = args.s
+    # algorithm_type = args.a
+    # n = args.n
+    # motifs_file = ''
+    # if args.m:
+    #     motifs_file = args.m
+    # output_file = 'analysis'
+    # if args.o:
+    #     output_file = args.o
 
-    solutions_file = args.s
-    algorithm_type = args.a
-    n = args.n
-    motifs_file = ''
-    if args.m:
-        motifs_file = args.m
+    solutions_file = '/home/ubuntu/PycharmProjects/ThesisCode/Thesis_code/Solutions/solutionsModified.xlsx'
+    algorithm_type = 'Nauty'
+    n = 3
+    motifs_file = '/home/ubuntu/PycharmProjects/MotifAlgorithm/examples-input/motifSearcherInputExample.txt'
     output_file = 'analysis'
-    if args.o:
-        output_file = args.o
-
     run(solutions_file, algorithm_type, n, motifs_file, output_file)
