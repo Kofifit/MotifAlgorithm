@@ -75,7 +75,12 @@ class UtilFunctions:
         df = df.astype(int)
         network = dict()
         for index, row in df.iterrows():
-            network[int(row['Index'])] = [[int(row['Gene A']), int(row['Gene B'])], int(row['Activation/Repression']), int(row['delta'])]
+            try:
+                network[int(row['Index'])] = [[int(row['Gene A']), int(row['Gene B'])], int(row['Activation/Repression']), int(row['delta'])]
+            except:
+                network[int(row['Index'])] = [[int(row['Gene A']), int(row['Gene B'])], int(row['Activation/Repression'])]
+
+
         return network
 
 
@@ -279,6 +284,9 @@ class UtilFunctions:
 
         originNetworkCopy = copy.deepcopy(originNetwork)
 
+        if len(otherNetwork[list(otherNetwork.keys())[0]]) == 2:
+            UtilFunctions.add_delta(otherNetwork)
+
         for key in otherNetwork.keys():
             if key in originNetworkCopy:
                 del originNetworkCopy[key]
@@ -292,6 +300,12 @@ class UtilFunctions:
             d = -1
             value[-1] = d
             otherNetwork[key] = value
+
+
+    @staticmethod
+    def add_delta(network):
+        for key in network.keys():
+            network[key].append(0)
 
     @staticmethod
     def Network2NetworkX(network):
