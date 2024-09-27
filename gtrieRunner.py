@@ -6,7 +6,7 @@ def runAnalysisNauty(n, network):
     filename = 'bin/networkNauty.txt'
     col_names = ['edge', 'Activation/Repression', 'delta']
     UtilFunctions.network2txt(filename, network, col_names)
-    subprocess.run(["./gtrieScannerFolder/gtrieScanner", "-s", str(n), "-d", "-m", "esu", "-g", filename,"-o", 'bin/results.txt', "-oc", "bin/locations.txt"],
+    subprocess.run(["./gtrieScannerFolder/gtrieScanner", "-s", str(n), "-d", "-m", "esu", "-g", filename, "-o", 'bin/results.txt', "-oc", "bin/locations.txt"],
                    stdout=subprocess.DEVNULL,
                    stderr=subprocess.STDOUT)
     result = convertResult2df(n, network, 'bin/locations.txt')
@@ -36,7 +36,7 @@ def convertResult2df(n, network, filename_locations):
     for index_edge, edge in network.items():
         for motif in nodes_dict.keys():
             for index_graph, graph in enumerate(nodes_dict[motif]):
-                if set(edge[0]).issubset(set(graph)):
+                if set(edge[0]).issubset(set(graph)) and len(set(edge[0])) > 1:
                     edge_indices[motif][index_graph].append(index_edge)
                     location_list[motif][index_graph].append(edge[0])
 

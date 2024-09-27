@@ -119,9 +119,5 @@ if __name__ == "__main__":
     if args.o:
         output_file = args.o
 
-    # solutions_file = 'Solutions/network1_modified.xlsx'
-    # algorithm_type = 'Nauty'
-    # n = 3
-    # motifs_file = ''
-    # output_file = 'analysis'
-    run(solutions_file, algorithm_type, n, motifs_file, output_file,'FULL')
+
+

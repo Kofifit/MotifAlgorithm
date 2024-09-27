@@ -11,13 +11,13 @@ if __name__ == "__main__":
     #
     # solutions_file = args.f
     # output_file = args.o
+    for i in range(1, 11):
+        solutions_file = f'Solutions/network{i}.xlsx'
+        output_file = f'Solutions/network{i}_modified.xlsx'
+        solutions = UtilFunctions.excel2solutionSetList(solutions_file)
 
-    solutions_file = 'Solutions/network1.xlsx'
-    output_file = 'Solutions/network1_modified.xlsx'
-    solutions = UtilFunctions.excel2solutionSetList(solutions_file)
+        col_names = ['edge', 'Activation/Repression', 'delta']
 
-    col_names = ['edge', 'Activation/Repression', 'delta']
+        UtilFunctions.solutionSetModified2excel(solutions, col_names, output_file)
 
-    UtilFunctions.solutionSetModified2excel(solutions, col_names, output_file)
-
-    print('Solutions saved successfully!')
+        print('Solutions saved successfully!')

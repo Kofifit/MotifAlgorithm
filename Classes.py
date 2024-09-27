@@ -4,6 +4,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import numpy as np
 from gtrieRunner import runAnalysisNauty
+import pandas as pd
 import re
 import itertools
 
@@ -472,19 +473,25 @@ class DeltaNetworkMotifAnalyzer:
         """
         originAnalysis_copy = self.originAnalysis.copy()
 
-       # Iterate over each row (motif) in the original analysis
+        check_submotif = {}
+        # Iterate over each row (motif) in the original analysis
         for row_num, row in originAnalysis_copy.iterrows():
             origin_indices_keep = []
             motifs = row['Edges indices']
+            check_submotif[row_num] = {}
             # Iterate over each motif's location in the analysis of the original network
             for index, motif in enumerate(motifs):
                 keep = False
+                check = False
                 for edge in motif:
                     delta = network[edge][2]
                     # Check if the edge does not appear in the delta network
-                    if edge not in delta_network.keys():
+                    if edge not in delta_network:
                         # Keep motif in the original analysis
                         keep = True
+                    else:
+                        check = True
+
                     # Check if the edge does not appear in the modified network at all
                     if delta == -1:
                         # Remove motif from the original analysis
@@ -492,47 +499,73 @@ class DeltaNetworkMotifAnalyzer:
                         break
                 if keep:
                     origin_indices_keep.append(index)
+                    if check:
+                        check_submotif[row_num][index] = motif
 
             # Update the original analysis to remove edges that were not found in the modified network
-            originAnalysis_copy.at[row_num, 'Edges indices'] = [edge for idx, edge in enumerate(motifs) if idx in origin_indices_keep]
-            originAnalysis_copy.at[row_num, 'Location of appearances in network'] = [loc for idx, loc in enumerate(row['Location of appearances in network']) if idx in origin_indices_keep]
+            lst = list([edge for idx, edge in enumerate(motifs) if idx in origin_indices_keep])
+            originAnalysis_copy.at[row_num, 'Edges indices'] = lst
+            lst = list([loc for idx, loc in enumerate(row['Location of appearances in network']) if idx in origin_indices_keep])
+            originAnalysis_copy.at[row_num, 'Location of appearances in network'] = lst
             originAnalysis_copy.at[row_num, 'Number of appearances in network'] = len(origin_indices_keep)
 
+        # Get all indices for each motif from the delta network
+        delta_motif_indices = {}
+        for row_num, motif in analysis.iterrows():
+            delta_motif_indices[row_num] = motif['Edges indices']
+
+        # Check for sub-motifs in the origin analysis
+        motifs_remove = {}
+        other_motifs = []
+        for inner_dict in delta_motif_indices.values():
+            other_motifs.extend(inner_dict)
+        for row_num, location_dict in check_submotif.items():
+            motifs_remove[row_num] = []
+            for index, motif in location_dict.items():
+                if self.is_submotif(motif, other_motifs):
+                    motifs_remove[row_num].append(index)
+
+        for row_num, row in originAnalysis_copy.iterrows():
+            originAnalysis_copy.at[row_num, 'Edges indices'] = [edge for idx, edge in enumerate(row['Edges indices']) if not idx in motifs_remove[row_num]]
+            originAnalysis_copy.at[row_num, 'Location of appearances in network'] = [loc for idx, loc in enumerate(row['Location of appearances in network']) if not idx in motifs_remove[row_num]]
+            originAnalysis_copy.at[row_num, 'Number of appearances in network'] = row['Number of appearances in network'] - len(motifs_remove[row_num])
+
+        # Check for sub-motifs in the current solution
+        motifs_remove = {}
+        other_motifs = []
+        for inner_dict in check_submotif.values():
+            other_motifs.extend(inner_dict.values())
+        for row_num, locations in delta_motif_indices.items():
+            motifs_remove[row_num] = []
+            for index, motif in enumerate(locations):
+                if self.is_submotif(motif, other_motifs):
+                    motifs_remove[row_num].append(index)
+
+        for row_num, row in analysis.iterrows():
+            analysis.at[row_num, 'Edges indices'] = [edge for idx, edge in enumerate(row['Edges indices']) if not idx in motifs_remove[row_num]]
+            analysis.at[row_num, 'Location of appearances in network'] = [loc for idx, loc in enumerate(row['Location of appearances in network']) if idx not in motifs_remove[row_num]]
+            analysis.at[row_num, 'Number of appearances in network'] = row['Number of appearances in network'] - len(motifs_remove[row_num])
+
+        # Merge the two solutions after removal of sub-motifs
+        for row_num, row in originAnalysis_copy.iterrows():
             # If the motif still has appearances in the analysis of the modified network, add them to the copy original analysis
             if originAnalysis_copy['Number of appearances in network'].loc[row_num] > 0:
-                if row_num in analysis.index:
-                    analysis.at[row_num, 'Edges indices'].extend(originAnalysis_copy.at[row_num, 'Edges indices'])
-                    analysis.at[row_num, 'Location of appearances in network'].extend(originAnalysis_copy.at[row_num, 'Location of appearances in network'])
-                    analysis.at[row_num, 'Number of appearances in network'] += originAnalysis_copy.at[row_num, 'Number of appearances in network']
+                i = analysis['Motif'][analysis['Motif'] == row['Motif']].index
+                if i.empty:
+                    analysis = analysis._append(originAnalysis_copy.loc[row_num], ignore_index=True)
                 else:
-                    analysis = analysis._append(originAnalysis_copy.loc[row_num])
-
-        # Get all indices for each motif
-        all_motif_indices = []
-        for motif_num, motif in analysis.iterrows():
-            all_motif_indices.append(motif['Edges indices'])
-
-        # Find all motifs in the analysis that are truly sub-motifs
-        submotif_remove = [[] for i in range(0, len(analysis))]
-        for motif_type_index, motif_indices in enumerate(all_motif_indices):
-            for motif_loc_index, motif in enumerate(motif_indices):
-                if self.is_submotif(motif, [x for xs in all_motif_indices for x in xs]):
-                    submotif_remove[motif_type_index].append(motif_loc_index)
-
-        # Remove all sub-motifs from the analysis
-        for row_num, indices_remove in enumerate(submotif_remove):
-            if indices_remove:
-                row = analysis.iloc[row_num]
-                analysis.at[row_num, 'Edges indices'] = [edge for idx, edge in enumerate(row['Edges indices']) if idx not in indices_remove]
-                analysis.at[row_num, 'Location of appearances in network'] = [loc for idx, loc in enumerate(row['Location of appearances in network']) if idx not in indices_remove]
-                analysis.at[row_num, 'Number of appearances in network'] = row['Number of appearances in network'] - len(indices_remove)
+                    i = i[0]
+                    analysis.at[i, 'Edges indices'].extend(originAnalysis_copy.at[row_num, 'Edges indices'])
+                    analysis.at[i, 'Location of appearances in network'].extend(originAnalysis_copy.at[row_num, 'Location of appearances in network'])
+                    analysis.at[i, 'Number of appearances in network'] += originAnalysis_copy.at[row_num, 'Number of appearances in network']
 
         return analysis
 
     def is_submotif(self, subgraph_indices, all_indices):
+        set_subgraph = set(subgraph_indices)
         for graph in all_indices:
             if len(graph) > len(subgraph_indices):
-                if set(subgraph_indices).issubset(set(graph)):
+                if set_subgraph.issubset(set(graph)):
                     return True
         return False
 
