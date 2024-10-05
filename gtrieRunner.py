@@ -34,9 +34,10 @@ def convertResult2df(n, network, filename_locations):
             location_list[motif].append([])
 
     for index_edge, edge in network.items():
+        nodes = set(edge[0])
         for motif in nodes_dict.keys():
             for index_graph, graph in enumerate(nodes_dict[motif]):
-                if set(edge[0]).issubset(set(graph)) and len(set(edge[0])) > 1:
+                if nodes.issubset(set(graph)) and len(nodes)>1:
                     edge_indices[motif][index_graph].append(index_edge)
                     location_list[motif][index_graph].append(edge[0])
 
