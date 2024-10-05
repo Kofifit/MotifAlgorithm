@@ -629,24 +629,44 @@ class MotifSearcher:
 
 class GraphVisualization:
 
-    def __init__(self, solutions):
+    def __init__(self, solutions, analyses_lst):
         self.solutions = solutions
+        self.analyses = analyses_lst
+
+    def getGraphs(self, X):
+
+        folder = 'Figures/'
+        ## Draw combination graph for all solutions
+        self.createCombinationGraph(self.solutions, folder + f"network{X}_Graph-Combined_solutions")
+        for i, s in enumerate(self.solutions):
+            self.createDeltaNetworkGraph(s, folder + f"network{X}_solution{i}_delta_graph")
+            self.createRegularGraph(s, folder + f"network{X}_solution{i}_regular_graph")
+            motifs_df = self.analyses[i]
+            new_network = UtilFunctions.addMotifs2Network(s, motifs_df)
+            for motif_index, m in motifs_df.iterrows():
+                self.createMotifDeltaNetworkGraph(new_network,
+                                                         folder + f"network{X}_solution{i}_motif{motif_index}_delta_motif_graph",
+                                                         motif_index)
+                self.createMotifNetworkGraph(new_network,
+                                                    folder + f"network{X}_solution{i}_motif{motif_index}_regular_motif_graph",
+                                                    motif_index)
 
     def createRegularGraph(self, network, name):
         network = UtilFunctions.Network2NetworkX(network)
         edges = network.edges()
-        node_size = 50
 
         pos_dict = {}
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
         # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
 
-
         for pos_name, pos in pos_dict.items():
-            plt.figure(figsize=(10, 6))
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1], node_size=node_size, node_color='blue', arrowstyle='->')
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2], node_size=node_size, node_color='blue', arrowstyle='-[', arrowsize=7)
+            node_size, fig_size = self.getSizes(network)
+            plt.figure(figsize=fig_size)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
+                    node_size=node_size, node_color='lightblue', arrowstyle='->', alpha=0.8)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
+                    node_size=node_size, node_color='lightblue', arrowstyle='-[', arrowsize=7, alpha=0.8)
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
@@ -667,19 +687,18 @@ class GraphVisualization:
                 color = 'red'
             colors[index].append(color)
 
-        node_size = 50
-
         pos_dict = {}
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
         # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
 
         for pos_name, pos in pos_dict.items():
-            plt.figure(figsize=(10, 6))
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
-                    edge_color=colors[0], node_size=node_size, node_color='blue', arrowstyle='->')
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
-                    edge_color=colors[1], node_size=node_size, node_color='blue', arrowstyle='-[', arrowsize=7)
+            node_size, fig_size = self.getSizes(network)
+            plt.figure(figsize=fig_size)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
+                    edge_color=colors[0], node_size=node_size, node_color='lightblue', arrowstyle='->', alpha=0.8)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
+                    edge_color=colors[1], node_size=node_size, node_color='lightblue', arrowstyle='-[', arrowsize=7, alpha=0.8)
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
@@ -710,20 +729,18 @@ class GraphVisualization:
                 color = 'green'
             colors[index].append(color)
 
-        node_size = 50
-
         pos_dict = {}
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
         # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
 
-
         for pos_name, pos in pos_dict.items():
-            plt.figure(figsize=(10, 6))
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
-                    node_size=node_size, node_color='blue', edge_color=colors[0], width=widths[0], arrowstyle='->')
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
-                    node_size=node_size, node_color='blue', edge_color=colors[1], width=widths[1], arrowstyle='-[', arrowsize=7)
+            node_size, fig_size = self.getSizes(network)
+            plt.figure(figsize=fig_size)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
+                    node_size=node_size, node_color='lightblue', edge_color=colors[0], width=widths[0], arrowstyle='->', alpha=0.8)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
+                    node_size=node_size, node_color='lightblue', edge_color=colors[1], width=widths[1], arrowstyle='-[', arrowsize=7, alpha=0.8)
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
@@ -733,7 +750,6 @@ class GraphVisualization:
         network = UtilFunctions.Network2NetworkX(merged_solutions)
         edges = network.edges()
         weights = [network[u][v]['weight'] for u, v in edges]
-        node_size = 50
 
         pos_dict = {}
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
@@ -742,9 +758,12 @@ class GraphVisualization:
 
 
         for pos_name, pos in pos_dict.items():
-            plt.figure(figsize=(10, 6))
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1], node_size=node_size, node_color='blue', width=weights, arrowstyle='->')
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2], node_size=node_size, node_color='blue', width=weights, arrowstyle='-[', arrowsize=7)
+            node_size, fig_size = self.getSizes(network)
+            plt.figure(figsize=fig_size)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
+                    node_size=node_size, node_color='green', width=weights, arrowstyle='->', alpha=0.5)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
+                    node_size=node_size, node_color='green', width=weights, arrowstyle='-[', arrowsize=7, alpha=0.5)
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
@@ -766,7 +785,6 @@ class GraphVisualization:
             else:
                 color = 'black'
             colors[index].append(color)
-        node_size = 50
 
         pos_dict = {}
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
@@ -775,12 +793,30 @@ class GraphVisualization:
 
 
         for pos_name, pos in pos_dict.items():
-            plt.figure(figsize=(10, 6))
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1], node_size=node_size, node_color='blue', edge_color=colors[0], arrowstyle='->')
-            nx.draw(network, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2], node_size=node_size, node_color='blue', edge_color=colors[1], arrowstyle='-[', arrowsize=7)
+            node_size, fig_size = self.getSizes(network)
+            plt.figure(figsize=fig_size)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
+                    node_size=node_size, node_color='blue', edge_color=colors[0], arrowstyle='->', alpha=0.8)
+            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
+                    node_size=node_size, node_color='lightblue', edge_color=colors[1], arrowstyle='-[', arrowsize=7, alpha=0.8)
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
+
+    def getSizes(self, G):
+
+        max_width = 40  # Maximum width in inches
+        max_height = 24  # Maximum height in inches
+
+        # Calculate the figure size based on the number of nodes
+        num_nodes = G.number_of_nodes()
+        fig_width = min(num_nodes * 1.5, max_width)  # Limit width
+        fig_height = min(num_nodes * 1, max_height)
+        fig_size = (fig_width, fig_height)
+
+        # Calculate node size based on the number of nodes
+        node_size = min(500, 200 + (num_nodes * 20))  # Limit node size
+        return node_size, fig_size
 
 
 
