@@ -24,6 +24,6 @@ The 'main.py' file receives the following parameters - s (solutions file), a (al
 * These are optional parameters
 
 ## Acknowledgements
-Portions of this project use code originally developed by Pedro Ribeiro, licensed under the [Artistic License 2.0](https://www.dcc.fc.up.pt/gtries/LICENSE.txt).
+The folder 'gtrieScannerFolder' in this project contains code originally developed by Pedro Ribeiro, licensed under the [Artistic License 2.0](https://www.dcc.fc.up.pt/gtries/LICENSE.txt). 
 
 
