@@ -9,7 +9,7 @@ The algorithm provides the following analyses for the solutions sets obtained fr
 2. A motif analysis for each solution separately. This analysis contains the motifs that appeared in the network, their locations and how many times they appeared.
 3. A tool for motif lookup in the solutions. You can use this to upload a file that contains the motif you are interested in. The analysis would only provide the motifs you searched for. An example for the file is in 'motifSearcherInputExample.txt' in the 'examples-input' folder.
 
-The motif analysis is done using Brute-Force algorithm or Nauty algorithm (obtained from gTries scanner ** ADD CITATION **).
+The motif analysis is done using Brute-Force algorithm or Nauty algorithm (obtained from gTries scanner).
 The tool was only tested on Ubuntu.
 
 To install the tool and all necessary packages run the following script through the terminal - 'install.sh'
@@ -23,5 +23,7 @@ To run the algorithm you can run the following line in your terminal:
 The 'main.py' file receives the following parameters - s (solutions file), a (algorithm type), n (motif size), *m (motifs file), *o (output file)
 * These are optional parameters
 
+## Acknowledgements
+Portions of this project use code originally developed by Pedro Ribeiro, licensed under the [Artistic License 2.0](https://www.dcc.fc.up.pt/gtries/LICENSE.txt).
 
 
