@@ -23,17 +23,17 @@ class DataTransformer:
             df['Gene B'] = df['Gene B'].map(gene_map)
             df['delta'] = [0] * len(df)
             df.rename(columns={'Unnamed: 0': 'Index'}, inplace=True)
-            solutions.append(df)
-
-        for i, s in enumerate(solutions):
-            temp_s = UtilFunctions.df2network(s)
-            print(len(temp_s))
-            if i == 0:
-                origin = temp_s
-            UtilFunctions.find_delta(origin, temp_s)
-            solutions[i] = temp_s
+            s = UtilFunctions.df2network(df)
+            solutions.append(s)
 
         return solutions, gene_map
+    def extractDelta(self, solutions):
+        for i, s in enumerate(solutions):
+            if i == 0:
+                origin = s
+            UtilFunctions.find_delta(origin, s)
+            solutions[i] = s
+        return solutions
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
