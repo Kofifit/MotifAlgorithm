@@ -9,6 +9,7 @@ import re
 import itertools
 
 
+
 class Network:
     """
     Represents a network of nodes and edges. The network can add nodes, edges,
@@ -514,31 +515,65 @@ class DeltaNetworkMotifAnalyzer:
         for row_num, motif in analysis.iterrows():
             delta_motif_indices[row_num] = motif['Edges indices']
 
-        # Check for sub-motifs in the origin analysis
+        # Build a trie for motifs in the delta network
+        delta_trie = MotifTrie()
+        for motifs in delta_motif_indices.values():
+            for motif in motifs:
+                delta_trie.insert(motif)
+
+        # Remove sub-motifs from originAnalysis_copy
         motifs_remove = {}
-        other_motifs = []
-        for inner_dict in delta_motif_indices.values():
-            other_motifs.extend(inner_dict)
-        for row_num, location_dict in check_submotif.items():
+        for row_num, motif_dict in check_submotif.items():
             motifs_remove[row_num] = []
-            for index, motif in location_dict.items():
-                if self.is_submotif(motif, other_motifs):
+            for index, motif in motif_dict.items():
+                if delta_trie.is_submotif(motif):
                     motifs_remove[row_num].append(index)
+
+        # # Check for sub-motifs in the origin analysis
+        # motifs_remove = {}
+        # other_motifs = []
+        # for inner_dict in delta_motif_indices.values():
+        #     other_motifs.extend(inner_dict)
+        # other_motifs_array = np.array(other_motifs, dtype=object)
+        # sorted_indices = np.argsort([len(motif) for motif in other_motifs_array])[::-1]
+        # sorted_other_motifs = other_motifs_array[sorted_indices]
+        # for row_num, location_dict in check_submotif.items():
+        #     motifs_remove[row_num] = []
+        #     for index, motif in location_dict.items():
+        #         if self.is_submotif(motif, sorted_other_motifs):
+        #             motifs_remove[row_num].append(index)
 
         for row_num, row in originAnalysis_copy.iterrows():
             originAnalysis_copy.at[row_num, 'Edges indices'] = [edge for idx, edge in enumerate(row['Edges indices']) if not idx in motifs_remove[row_num]]
             originAnalysis_copy.at[row_num, 'Location of appearances in network'] = [loc for idx, loc in enumerate(row['Location of appearances in network']) if not idx in motifs_remove[row_num]]
             originAnalysis_copy.at[row_num, 'Number of appearances in network'] = row['Number of appearances in network'] - len(motifs_remove[row_num])
 
-        # Check for sub-motifs in the current solution
+        # # Check for sub-motifs in the current solution
+        # motifs_remove = {}
+        # other_motifs = []
+        # for inner_dict in check_submotif.values():
+        #     other_motifs.extend(inner_dict.values())
+        # other_motifs_array = np.array(other_motifs, dtype=object)
+        # sorted_indices = np.argsort([len(motif) for motif in other_motifs_array])[::-1]
+        # sorted_other_motifs = other_motifs_array[sorted_indices]
+        # for row_num, locations in delta_motif_indices.items():
+        #     motifs_remove[row_num] = []
+        #     for index, motif in enumerate(locations):
+        #         if self.is_submotif(motif, sorted_other_motifs):
+        #             motifs_remove[row_num].append(index)
+
+        # Build a trie for motifs in the delta network
+        origin_trie = MotifTrie()
+        for motifs in check_submotif.values():
+            for motif in motifs.values():
+                origin_trie.insert(motif)
+
+        # Remove sub-motifs from originAnalysis_copy
         motifs_remove = {}
-        other_motifs = []
-        for inner_dict in check_submotif.values():
-            other_motifs.extend(inner_dict.values())
-        for row_num, locations in delta_motif_indices.items():
+        for row_num, motif_dict in delta_motif_indices.items():
             motifs_remove[row_num] = []
-            for index, motif in enumerate(locations):
-                if self.is_submotif(motif, other_motifs):
+            for index, motif in enumerate(motif_dict):
+                if origin_trie.is_submotif(motif):
                     motifs_remove[row_num].append(index)
 
         for row_num, row in analysis.iterrows():
@@ -561,13 +596,15 @@ class DeltaNetworkMotifAnalyzer:
 
         return analysis
 
-    def is_submotif(self, subgraph_indices, all_indices):
-        set_subgraph = set(subgraph_indices)
-        for graph in all_indices:
-            if len(graph) > len(subgraph_indices):
-                if set_subgraph.issubset(set(graph)):
-                    return True
-        return False
+    # def is_submotif(self, subgraph_indices, all_indices):
+    #     set_subgraph = set(subgraph_indices)
+    #     for graph in all_indices:
+    #         if len(graph) > len(subgraph_indices):
+    #             if set_subgraph.issubset(set(graph)):
+    #                 return True
+    #         else:
+    #             return False
+    #     return False
 
 
 class MotifSearcher:
@@ -634,7 +671,7 @@ class GraphVisualization:
         self.analyses = analyses_lst
 
     def getGraphs(self, X):
-
+        plt.rcParams.update({'font.size': 30})
         folder = 'Figures/'
         ## Draw combination graph for all solutions
         self.createCombinationGraph(self.solutions, folder + f"network{X}_Graph-Combined_solutions")
@@ -656,20 +693,53 @@ class GraphVisualization:
         edges = network.edges()
 
         pos_dict = {}
+        # pos_dict['pos'] = nx.kamada_kawai_layout(network)
+        # pos_dict['pos'] = nx.spectral_layout(network)
+
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
+        # pos_dict['spring']  = nx.spring_layout(network, k=0.1, iterations=100, seed=42)
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
         # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
-
         for pos_name, pos in pos_dict.items():
             node_size, fig_size = self.getSizes(network)
-            plt.figure(figsize=fig_size)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
-                    node_size=node_size, node_color='lightblue', arrowstyle='->', alpha=0.8)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
-                    node_size=node_size, node_color='lightblue', arrowstyle='-[', arrowsize=7, alpha=0.8)
+            fig, ax = plt.subplots(figsize=fig_size)
+            # Draw nodes
+            nx.draw_networkx_nodes(
+                network,
+                pos,
+                node_size=node_size,
+                node_color='lightblue',
+                alpha=0.9,
+            )
+
+            # Draw edges
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
+                arrowstyle='->',
+                width=2,
+                arrowsize=30,
+                alpha=0.8,
+            )
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
+                arrowstyle='-[',
+                width=2,
+                arrowsize=10,
+                alpha=0.8,
+            )
+
+            # Draw labels
+            nx.draw_networkx_labels(network, pos, font_size=12)
+
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
+
+
 
     def createMotifNetworkGraph(self, network, name, motif_index):
         network = UtilFunctions.Network2NetworkX(network)
@@ -688,20 +758,55 @@ class GraphVisualization:
             colors[index].append(color)
 
         pos_dict = {}
+        # pos_dict['pos'] = nx.kamada_kawai_layout(network)
+        # pos_dict['pos'] = nx.spectral_layout(network)
+
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
+        # pos_dict['spring']  = nx.spring_layout(network, k=0.1, iterations=100, seed=42)
+
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
         # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
-
         for pos_name, pos in pos_dict.items():
             node_size, fig_size = self.getSizes(network)
-            plt.figure(figsize=fig_size)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
-                    edge_color=colors[0], node_size=node_size, node_color='lightblue', arrowstyle='->', alpha=0.8)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
-                    edge_color=colors[1], node_size=node_size, node_color='lightblue', arrowstyle='-[', arrowsize=7, alpha=0.8)
+            plt.figure(figsize=fig_size)  # Adjust figure size
+            # Draw nodes
+            nx.draw_networkx_nodes(
+                network,
+                pos,
+                node_size=node_size,
+                node_color='lightblue',
+                alpha=0.6
+            )
+
+            # Draw edges
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
+                edge_color=colors[0],
+                width=2,
+                arrowstyle='->',
+                arrowsize=30,
+                alpha=0.8
+            )
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
+                edge_color=colors[1],
+                width=2,
+                arrowstyle='-[',
+                arrowsize=10,
+                alpha=0.8
+            )
+
+            # Draw labels
+            nx.draw_networkx_labels(network, pos, font_size=12)
+
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
+
 
     def createMotifDeltaNetworkGraph(self, network, name, motif_index):
         network = UtilFunctions.Network2NetworkX(network)
@@ -716,9 +821,9 @@ class GraphVisualization:
                 index = 1
 
             motifs = network[u][v]['motifs']
-            width = 0.7
+            width = 0.5
             if motif_index in motifs:
-                width = 2
+                width = 3
             widths[index].append(width)
 
             delta = network[u][v]['delta']
@@ -726,21 +831,56 @@ class GraphVisualization:
             if delta == -1:
                 color = 'red'
             elif delta == 1:
-                color = 'green'
+                color = 'darkgreen'
             colors[index].append(color)
 
         pos_dict = {}
+        # pos_dict['pos'] = nx.kamada_kawai_layout(network)
+        # pos_dict['spring']  = nx.spring_layout(network, k=0.1, iterations=100, seed=42)
+        # pos_dict['pos'] = nx.spectral_layout(network)
+
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
         # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
 
         for pos_name, pos in pos_dict.items():
             node_size, fig_size = self.getSizes(network)
-            plt.figure(figsize=fig_size)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
-                    node_size=node_size, node_color='lightblue', edge_color=colors[0], width=widths[0], arrowstyle='->', alpha=0.8)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
-                    node_size=node_size, node_color='lightblue', edge_color=colors[1], width=widths[1], arrowstyle='-[', arrowsize=7, alpha=0.8)
+            plt.figure(figsize=fig_size)  # Adjust figure size
+            # Draw nodes
+            nx.draw_networkx_nodes(
+                network,
+                pos,
+                node_size=node_size,
+                node_color='lightblue',
+                alpha=0.6
+            )
+
+            # Draw edges
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
+                width=widths[0],
+                edge_color=colors[0],
+                arrowstyle='->',
+                arrowsize=30,
+                alpha=0.8
+            )
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
+                width=widths[1],
+                edge_color=colors[1],
+                arrowstyle='-[',
+                arrowsize=10,
+                alpha=0.8
+            )
+
+
+            # Draw labels
+            nx.draw_networkx_labels(network, pos, font_size=12)
+
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
@@ -748,22 +888,64 @@ class GraphVisualization:
     def createCombinationGraph(self, solutions, name):
         merged_solutions = UtilFunctions.CombineSolutions(solutions)
         network = UtilFunctions.Network2NetworkX(merged_solutions)
+
         edges = network.edges()
         weights = [network[u][v]['weight'] for u, v in edges]
 
+        # Position nodes using spring layout
         pos_dict = {}
+        # pos_dict['pos'] = nx.kamada_kawai_layout(network)
+        # pos_dict['pos'] = nx.spectral_layout(network)
+
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
-        # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
+
+        # pos_dict['pos'] = nx.kamada_kawai_layout(network)
+        # pos_dict['spring']  = nx.spring_layout(network, k=0.1, iterations=100, seed=42)
 
 
+        # Node size and edge weight scaling
+        node_size = [1 + network.degree(n) for n in network.nodes()]
+        max_weight = max(weights) if weights else 1
+        scaled_weights = [w / max_weight * 3 for w in weights]
+
+        # Visualization
         for pos_name, pos in pos_dict.items():
             node_size, fig_size = self.getSizes(network)
-            plt.figure(figsize=fig_size)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
-                    node_size=node_size, node_color='green', width=weights, arrowstyle='->', alpha=0.5)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
-                    node_size=node_size, node_color='green', width=weights, arrowstyle='-[', arrowsize=7, alpha=0.5)
+            plt.figure(figsize=fig_size)  # Adjust figure size
+            # Draw nodes
+            nx.draw_networkx_nodes(
+                network,
+                pos,
+                node_size=node_size,
+                node_color='lightblue',
+                alpha=0.6
+            )
+
+            # Draw edges
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
+                width=scaled_weights,
+                arrowstyle='->',
+                arrowsize=30,
+                alpha=0.8
+            )
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
+                width=scaled_weights,
+                arrowstyle='-[',
+                arrowsize=10,
+                alpha=0.8
+            )
+
+
+            # Draw labels
+            nx.draw_networkx_labels(network, pos, font_size=12)
+
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
@@ -772,6 +954,7 @@ class GraphVisualization:
         network = UtilFunctions.Network2NetworkX(deltaNetwork)
         edges = network.edges()
         colors = [[], []]
+        scaled_weights = [[], []]
         for u, v in edges:
             delta = network[u][v]['delta']
             if network[u][v]['function'] == 1:
@@ -780,33 +963,72 @@ class GraphVisualization:
                 index = 1
             if delta == -1:
                 color = 'red'
+                weight = 3
             elif delta == 1:
-                color = 'green'
+                color = 'darkgreen'
+                weight = 3
             else:
                 color = 'black'
+                weight = 0.5
+
             colors[index].append(color)
+            scaled_weights[index].append(weight)
+        # pos_dict['pos'] = nx.kamada_kawai_layout(network)
 
         pos_dict = {}
+        # pos_dict['pos'] = nx.kamada_kawai_layout(network)
+        # pos_dict['pos'] = nx.spectral_layout(network)
+        # pos_dict['spring']  = nx.spring_layout(network, k=0.1, iterations=100, seed=42)
+
         pos_dict['neato'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='neato')
         # pos_dict['sfdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='sfdp')
-        # pos_dict['fdp'] = nx.drawing.nx_agraph.graphviz_layout(network, prog='fdp')
 
 
         for pos_name, pos in pos_dict.items():
             node_size, fig_size = self.getSizes(network)
             plt.figure(figsize=fig_size)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==1],
-                    node_size=node_size, node_color='blue', edge_color=colors[0], arrowstyle='->', alpha=0.8)
-            nx.draw(network, with_labels=True, pos=pos, edgelist=[(u, v) for u, v in edges if network[u][v]['function']==2],
-                    node_size=node_size, node_color='lightblue', edge_color=colors[1], arrowstyle='-[', arrowsize=7, alpha=0.8)
+
+            nx.draw_networkx_nodes(
+                network,
+                pos,
+                node_size=node_size,
+                node_color='lightblue',
+                alpha=0.6
+            )
+
+            # Draw edges
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 1],
+                arrowstyle='->',
+                width = scaled_weights[0],
+                edge_color=colors[0],
+                arrowsize=30,
+                alpha=0.8
+            )
+            nx.draw_networkx_edges(
+                network,
+                pos,
+                edgelist=[(u, v) for u, v in edges if network[u][v]['function'] == 2],
+                arrowstyle='-[',
+                width = scaled_weights[1],
+                edge_color=colors[1],
+                arrowsize=10,
+                alpha=0.8
+            )
+
+            # Draw labels
+            nx.draw_networkx_labels(network, pos, font_size=12)
+
             plt.suptitle(name)
             plt.savefig(name + '.png')
             plt.close()
 
     def getSizes(self, G):
 
-        max_width = 40  # Maximum width in inches
-        max_height = 24  # Maximum height in inches
+        max_width = 30  # Maximum width in inches
+        max_height = 18  # Maximum height in inches
 
         # Calculate the figure size based on the number of nodes
         num_nodes = G.number_of_nodes()
@@ -815,8 +1037,41 @@ class GraphVisualization:
         fig_size = (fig_width, fig_height)
 
         # Calculate node size based on the number of nodes
-        node_size = min(500, 200 + (num_nodes * 20))  # Limit node size
+        node_size = min(2500, 2000 + (num_nodes * 20))  # Limit node size
         return node_size, fig_size
+
+
+class TrieNode:
+    def __init__(self):
+        self.children = {}
+        self.is_end = False
+
+class MotifTrie:
+    def __init__(self):
+        self.root = TrieNode()
+
+    def insert(self, motif):
+        """
+        Inserts a motif into the trie.
+        Motif should be sorted to maintain consistency.
+        """
+        current = self.root
+        for edge in sorted(motif):
+            if edge not in current.children:
+                current.children[edge] = TrieNode()
+            current = current.children[edge]
+        current.is_end = True
+
+    def is_submotif(self, motif):
+        """
+        Checks if the given motif is a sub-motif of an existing motif in the trie.
+        """
+        current = self.root
+        for edge in sorted(motif):
+            if edge not in current.children:
+                return False
+            current = current.children[edge]
+        return current.is_end
 
 
 
