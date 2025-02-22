@@ -510,6 +510,9 @@ class DeltaNetworkMotifAnalyzer:
             originAnalysis_copy.at[row_num, 'Location of appearances in network'] = lst
             originAnalysis_copy.at[row_num, 'Number of appearances in network'] = len(origin_indices_keep)
 
+
+        ### Remove motifs with Trie Origin Analysis ###
+
         # Get all indices for each motif from the delta network
         delta_motif_indices = {}
         for row_num, motif in analysis.iterrows():
@@ -521,59 +524,79 @@ class DeltaNetworkMotifAnalyzer:
             for motif in motifs:
                 delta_trie.insert(motif)
 
-        # Remove sub-motifs from originAnalysis_copy
-        motifs_remove = {}
+        # Remove sub-motifs from origin analysis
+        motifs_remove_origin = {}
         for row_num, motif_dict in check_submotif.items():
-            motifs_remove[row_num] = []
+            motifs_remove_origin[row_num] = []
             for index, motif in motif_dict.items():
                 if delta_trie.is_submotif(motif):
-                    motifs_remove[row_num].append(index)
+                    motifs_remove_origin[row_num].append(index)
 
-        # # Check for sub-motifs in the origin analysis
-        # motifs_remove = {}
-        # other_motifs = []
-        # for inner_dict in delta_motif_indices.values():
-        #     other_motifs.extend(inner_dict)
-        # other_motifs_array = np.array(other_motifs, dtype=object)
-        # sorted_indices = np.argsort([len(motif) for motif in other_motifs_array])[::-1]
-        # sorted_other_motifs = other_motifs_array[sorted_indices]
-        # for row_num, location_dict in check_submotif.items():
-        #     motifs_remove[row_num] = []
-        #     for index, motif in location_dict.items():
-        #         if self.is_submotif(motif, sorted_other_motifs):
-        #             motifs_remove[row_num].append(index)
+        ### Remove motifs with Trie Delta Analysis ###
+
+        # Build a trie for motifs in the origin network
+        origin_trie = MotifTrie()
+        for motifs in check_submotif.values():
+            for motif in motifs.values():
+                origin_trie.insert(motif)
+
+        # Remove sub-motifs from delta analysis
+        motifs_remove_delta = {}
+        for row_num, motif_dict in delta_motif_indices.items():
+            motifs_remove_delta[row_num] = []
+            for index, motif in enumerate(motif_dict):
+                if origin_trie.is_submotif(motif):
+                    motifs_remove_delta[row_num].append(index)
+
+
+        ## UPDATE LISTS OF MOTIFS ##
+
+        # Remove sub-motifs from list for final subset analysis patch
+        for row_num, indices in motifs_remove_origin.items():
+            if row_num in check_submotif:
+                for index in indices:
+                    check_submotif[row_num].pop(index, None)
+        for row_num, indices in motifs_remove_delta.items():
+            if row_num in delta_motif_indices:
+                for index in indices:
+                    delta_motif_indices[row_num].pop(index, None)
+
+
+        ### PATCH - Remove undetected submotifs with Set Origin Analysis###
+
+        # Check for sub-motifs in the origin analysis
+        motifs_remove = {}
+        other_motifs = []
+        for inner_dict in delta_motif_indices.values():
+            other_motifs.extend(inner_dict)
+        other_motifs_sets = [set(motif) for motif in other_motifs]
+        sorted_other_motifs = sorted(other_motifs_sets, key=len, reverse=True)
+
+        for row_num, location_dict in check_submotif.items():
+            motifs_remove[row_num] = []
+            for index, motif in location_dict.items():
+                if self.is_submotif(set(motif), sorted_other_motifs):
+                    motifs_remove[row_num].append(index)
 
         for row_num, row in originAnalysis_copy.iterrows():
             originAnalysis_copy.at[row_num, 'Edges indices'] = [edge for idx, edge in enumerate(row['Edges indices']) if not idx in motifs_remove[row_num]]
             originAnalysis_copy.at[row_num, 'Location of appearances in network'] = [loc for idx, loc in enumerate(row['Location of appearances in network']) if not idx in motifs_remove[row_num]]
             originAnalysis_copy.at[row_num, 'Number of appearances in network'] = row['Number of appearances in network'] - len(motifs_remove[row_num])
 
-        # # Check for sub-motifs in the current solution
-        # motifs_remove = {}
-        # other_motifs = []
-        # for inner_dict in check_submotif.values():
-        #     other_motifs.extend(inner_dict.values())
-        # other_motifs_array = np.array(other_motifs, dtype=object)
-        # sorted_indices = np.argsort([len(motif) for motif in other_motifs_array])[::-1]
-        # sorted_other_motifs = other_motifs_array[sorted_indices]
-        # for row_num, locations in delta_motif_indices.items():
-        #     motifs_remove[row_num] = []
-        #     for index, motif in enumerate(locations):
-        #         if self.is_submotif(motif, sorted_other_motifs):
-        #             motifs_remove[row_num].append(index)
+        ### PATCH - Remove undetected submotifs with Set Delta Analysis###
 
-        # Build a trie for motifs in the delta network
-        origin_trie = MotifTrie()
-        for motifs in check_submotif.values():
-            for motif in motifs.values():
-                origin_trie.insert(motif)
-
-        # Remove sub-motifs from originAnalysis_copy
+        # Check for sub-motifs in the current solution
         motifs_remove = {}
-        for row_num, motif_dict in delta_motif_indices.items():
+        other_motifs = []
+        for inner_dict in check_submotif.values():
+            other_motifs.extend(inner_dict.values())
+        other_motifs_sets = [set(motif) for motif in other_motifs]
+        sorted_other_motifs = sorted(other_motifs_sets, key=len, reverse=True)
+
+        for row_num, locations in delta_motif_indices.items():
             motifs_remove[row_num] = []
-            for index, motif in enumerate(motif_dict):
-                if origin_trie.is_submotif(motif):
+            for index, motif in enumerate(locations):
+                if self.is_submotif(set(motif), sorted_other_motifs):
                     motifs_remove[row_num].append(index)
 
         for row_num, row in analysis.iterrows():
@@ -591,20 +614,41 @@ class DeltaNetworkMotifAnalyzer:
                 else:
                     i = i[0]
                     analysis.at[i, 'Edges indices'].extend(originAnalysis_copy.at[row_num, 'Edges indices'])
-                    analysis.at[i, 'Location of appearances in network'].extend(originAnalysis_copy.at[row_num, 'Location of appearances in network'])
-                    analysis.at[i, 'Number of appearances in network'] += originAnalysis_copy.at[row_num, 'Number of appearances in network']
+                    analysis.at[i, 'Location of appearances in network'].extend(
+                        originAnalysis_copy.at[row_num, 'Location of appearances in network'])
+                    analysis.at[i, 'Number of appearances in network'] += originAnalysis_copy.at[
+                        row_num, 'Number of appearances in network']
+
+        # # Build a trie for motifs in the delta network
+        # origin_trie = MotifTrie()
+        # for motifs in check_submotif.values():
+        #     for motif in motifs.values():
+        #         origin_trie.insert(motif)
+        #
+        # # Remove sub-motifs from originAnalysis_copy
+        # motifs_remove = {}
+        # for row_num, motif_dict in delta_motif_indices.items():
+        #     motifs_remove[row_num] = []
+        #     for index, motif in enumerate(motif_dict):
+        #         if origin_trie.is_submotif(motif):
+        #             motifs_remove[row_num].append(index)
+
+        # for row_num, row in analysis.iterrows():
+        #     analysis.at[row_num, 'Edges indices'] = [edge for idx, edge in enumerate(row['Edges indices']) if not idx in motifs_remove[row_num]]
+        #     analysis.at[row_num, 'Location of appearances in network'] = [loc for idx, loc in enumerate(row['Location of appearances in network']) if idx not in motifs_remove[row_num]]
+        #     analysis.at[row_num, 'Number of appearances in network'] = row['Number of appearances in network'] - len(motifs_remove[row_num])
+
 
         return analysis
 
-    # def is_submotif(self, subgraph_indices, all_indices):
-    #     set_subgraph = set(subgraph_indices)
-    #     for graph in all_indices:
-    #         if len(graph) > len(subgraph_indices):
-    #             if set_subgraph.issubset(set(graph)):
-    #                 return True
-    #         else:
-    #             return False
-    #     return False
+    def is_submotif(self, subgraph_indices, all_indices):
+        for graph in all_indices:
+            if len(graph) > len(subgraph_indices):
+                if subgraph_indices.issubset(graph):
+                    return True
+            else:
+                return False
+        return False
 
 
 class MotifSearcher:
